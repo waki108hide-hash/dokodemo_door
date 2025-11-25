@@ -1,0 +1,729 @@
+<!-- --- START OF FILE index.html --- -->
+
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>どこでもドア Lite v4.0</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        // 認証機能
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import { getDatabase, ref, push, set, update, remove, get, child, query, orderByKey, startAt, onChildAdded, onChildChanged, onChildRemoved, onValue, onDisconnect, serverTimestamp }
+            from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+
+        // ▼▼▼ Firebase Config ▼▼▼
+        const firebaseConfig = {
+            apiKey: "AIzaSyAXNoSjASe1vBE_T_vgvOdmSiHXwePkbFE",
+            authDomain: "dokodemodoor-1a030.firebaseapp.com",
+            databaseURL: "https://dokodemodoor-1a030-default-rtdb.firebaseio.com",
+            projectId: "dokodemodoor-1a030",
+            storageBucket: "dokodemodoor-1a030.firebasestorage.app",
+            messagingSenderId: "866685137232",
+            appId: "1:866685137232:web:6e2568de33eefb23783c55"
+        };
+        // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const auth = getAuth(app);
+
+        const loginBtn = document.querySelector('.login-btn');
+        if (loginBtn) {
+            loginBtn.disabled = true;
+            loginBtn.textContent = "セキュリティ接続中...";
+            loginBtn.style.opacity = "0.7";
+        }
+
+        signInAnonymously(auth)
+            .then(() => { console.log("ログイン試行..."); })
+            .catch((error) => {
+                console.error("ログインエラー:", error);
+                if (error.code === 'auth/unauthorized-domain') {
+                    alert("接続エラー：このサイトのドメイン(URL)がFirebaseで許可されていません。\n管理者に「Authorized domains」の設定を確認するよう伝えてください。");
+                } else if (error.code === 'auth/admin-restricted-operation') {
+                    alert("接続エラー：匿名ログインが無効になっています。\n管理画面で「Anonymous Auth」を有効にしてください。");
+                } else {
+                    alert("接続エラーが発生しました: " + error.message);
+                }
+            });
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                console.log("セキュリティ接続完了: ID=" + user.uid);
+                state.uid = user.uid;
+                if (loginBtn) {
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = "スタート";
+                    loginBtn.style.opacity = "1";
+                    loginBtn.style.background = "linear-gradient(90deg, var(--accent), #4f46e5)";
+                }
+            }
+        });
+
+        window.db = db; window.dbRef = ref; window.dbPush = push; window.dbSet = set;
+        window.dbUpdate = update; window.dbRemove = remove; window.dbGet = get; window.dbChild = child;
+        window.dbQuery = query; window.dbOrderByKey = orderByKey; window.dbStartAt = startAt;
+        window.dbOnDisconnect = onDisconnect; window.dbOnValue = onValue;
+        window.dbOnChildAdded = onChildAdded; window.dbOnChildChanged = onChildChanged;
+        window.dbOnChildRemoved = onChildRemoved;
+        window.serverTimestamp = serverTimestamp;
+    </script>
+
+    <style>
+        :root {
+            /* ダークモード */
+            --bg-gradient-dark: linear-gradient(-45deg, #020617, #0f172a, #1e1b4b, #172554, #111827);
+            --panel-bg: rgba(15, 23, 42, 0.9);
+            --board-bg: #0f172a;
+            --text-main: #f8fafc;
+            --border: #334155;
+            --accent: #3b82f6;
+            --danger: #ef4444;
+            --chat-bg: rgba(2, 6, 23, 0.95);
+            --chat-mine: #2563eb;
+            --chat-other: #1e293b;
+            --modal-bg: #0f172a;
+            --current-bg: var(--bg-gradient-dark);
+        }
+
+        body.light-mode {
+            /* ライトモード */
+            --bg-gradient-light: linear-gradient(-45deg, #f8fafc, #eef2ff, #f0f9ff, #f5f3ff);
+            --panel-bg: rgba(255, 255, 255, 0.9);
+            --board-bg: rgba(255, 255, 255, 0.8);
+            --text-main: #334155;
+            --border: #cbd5e1;
+            --accent: #2563eb;
+            --chat-bg: rgba(255, 255, 255, 0.95);
+            --chat-mine: #3b82f6;
+            --chat-other: #f1f5f9;
+            --modal-bg: #ffffff;
+            --current-bg: var(--bg-gradient-light);
+        }
+
+        * {
+            box-sizing: border-box; margin: 0; padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            background: var(--current-bg);
+            background-size: 400% 400%;
+            animation: auroraWave 30s ease infinite;
+            color: var(--text-main);
+            height: 100vh; height: 100dvh;
+            overflow: hidden;
+            position: fixed; width: 100%;
+            transition: color 0.3s;
+            touch-action: none;
+        }
+
+        @keyframes auroraWave {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        button, input, textarea, .tool-btn, .login-btn, .close-btn-common, .resize-handle {
+            touch-action: manipulation; cursor: pointer;
+        }
+        .toolbar, .chat-messages { touch-action: pan-x pan-y; }
+
+        /* ログイン */
+        #login-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 9999; background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(8px);
+        }
+        .login-box {
+            background: var(--panel-bg); padding: 40px; border-radius: 24px;
+            width: 90%; max-width: 400px; text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+        .login-title {
+            font-size: 2rem; margin-bottom: 10px;
+            background: linear-gradient(90deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+        .login-input {
+            width: 100%; padding: 14px; margin: 12px 0; border-radius: 12px;
+            border: 1px solid var(--border); background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main); font-size: 16px; outline: none;
+        }
+        .login-btn {
+            background: linear-gradient(90deg, var(--accent), #4f46e5);
+            color: #fff; padding: 14px; border-radius: 30px; border: none;
+            font-weight: bold; width: 100%; margin-top: 24px; font-size: 1.1rem;
+        }
+        .theme-toggle-login {
+            position: absolute; bottom: 30px; right: 30px; font-size: 1.6rem;
+            color: var(--text-main); background: var(--panel-bg);
+            width: 50px; height: 50px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid var(--border);
+        }
+
+        /* アプリ画面 */
+        #app-screen { display: none; height: 100%; width: 100%; flex-direction: row; }
+        .visible { display: flex !important; }
+
+        /* ツールバー */
+        .toolbar {
+            width: 70px; background: var(--panel-bg); border-right: 1px solid var(--border);
+            display: flex; flex-direction: column; align-items: center; padding: 20px 0;
+            z-index: 100; backdrop-filter: blur(10px);
+        }
+        .tool-btn {
+            width: 46px; height: 46px; margin-bottom: 15px; border-radius: 14px;
+            flex-shrink: 0; background: transparent; color: var(--text-main);
+            font-size: 1.3rem; display: flex; align-items: center; justify-content: center;
+            border: none; transition: 0.2s; opacity: 0.7;
+        }
+        .tool-btn:hover { opacity: 1; background: rgba(255, 255, 255, 0.1); }
+        .tool-btn.active {
+            background: var(--accent); color: #fff; opacity: 1; box-shadow: 0 0 15px var(--accent);
+        }
+        .exit-btn { color: var(--danger); margin-top: auto; margin-bottom: 20px; }
+
+        /* パレット共通 */
+        .palette-container {
+            display: none; flex-direction: column; gap: 10px;
+            background: rgba(0, 0, 0, 0.6); padding: 12px; border-radius: 20px;
+            margin-bottom: 10px; border: 1px solid var(--border);
+        }
+        .color-dot {
+            width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff;
+            transition: transform 0.2s;
+        }
+        .color-dot.selected { transform: scale(1.3); border-color: var(--accent); }
+        .size-btn {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2); color: #fff;
+            border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem; font-weight: bold;
+        }
+        .size-btn.selected { background: var(--accent); border-color: #fff; transform: scale(1.1); }
+
+        /* メインエリア */
+        .main-area {
+            flex-grow: 1; position: relative; background: var(--board-bg);
+            overflow: hidden; cursor: grab; backdrop-filter: blur(5px);
+        }
+        #transform-layer {
+            position: absolute; top: 0; left: 0; transform-origin: 0 0; will-change: transform;
+        }
+        .layer-canvas { position: absolute; top: -2000px; left: -2000px; z-index: 1; pointer-events: none; }
+        #objects-layer { position: absolute; top: 0; left: 0; z-index: 3; }
+
+        /* オブジェクト(画像・テキスト) */
+        .resize-handle {
+            position: absolute; bottom: -8px; right: -8px; width: 36px; height: 36px;
+            background: var(--accent); border-radius: 50%; cursor: nwse-resize;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 14px; opacity: 0; z-index: 20;
+        }
+        .text-window:hover .resize-handle, .image-wrapper:hover .resize-handle { opacity: 1; }
+        @media (hover: none) { .resize-handle { opacity: 1; } }
+
+        .close-btn-common {
+            position: absolute; top: -12px; right: -12px; width: 26px; height: 26px;
+            background: var(--danger); color: #fff; border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 14px; font-weight: bold; z-index: 20;
+        }
+
+        .text-window {
+            position: absolute; min-width: 150px; min-height: 80px;
+            background: var(--modal-bg); border: 1px solid var(--border);
+            border-radius: 12px; box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            display: flex; flex-direction: column;
+        }
+        .text-header {
+            height: 24px; background: var(--border); cursor: grab;
+            border-radius: 11px 11px 0 0; opacity: 0.6;
+        }
+        .text-content {
+            flex-grow: 1; border: none; outline: none; background: transparent;
+            color: var(--text-main); font-size: 18px; resize: none; padding: 10px;
+        }
+
+        .image-wrapper {
+            position: absolute; border: 2px solid transparent; cursor: grab;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3); display: flex; flex-direction: column;
+        }
+        .image-wrapper:hover { border-color: var(--accent); }
+        .image-wrapper img {
+            width: 100%; height: 100%; object-fit: cover;
+            /* ★修正: 保存できるようにpointer-eventsを有効化、ただしドラッグ競合を防ぐ */
+            pointer-events: auto;
+            user-select: none; -webkit-user-drag: none; 
+        }
+
+        /* チャット */
+        .chat-area {
+            width: 320px; background: var(--chat-bg); border-left: 1px solid var(--border);
+            display: flex; flex-direction: column; z-index: 100; color: var(--text-main);
+            backdrop-filter: blur(15px);
+        }
+        .chat-header {
+            padding: 18px; text-align: center; border-bottom: 1px solid var(--border);
+            font-weight: bold; font-size: 1.1rem;
+            display: flex; justify-content: space-between; align-items: center; padding-left: 20px; padding-right: 20px;
+        }
+        .chat-messages {
+            flex-grow: 1; overflow-y: auto; padding: 15px;
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        .chat-input-box {
+            padding: 15px; border-top: 1px solid var(--border);
+            display: flex; gap: 10px; align-items: center; background: rgba(0, 0, 0, 0.2);
+        }
+        .chat-input {
+            flex-grow: 1; padding: 12px; border-radius: 24px; border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.1); color: var(--text-main); font-size: 16px;
+        }
+        .msg {
+            padding: 10px 16px; border-radius: 16px; max-width: 85%;
+            font-size: 0.95rem; word-break: break-word;
+        }
+        .msg-sys {
+            align-self: center; background: rgba(128, 128, 128, 0.3);
+            color: #ccc; font-size: 0.8rem; padding: 6px 14px;
+        }
+        .msg-self {
+            align-self: flex-end; background: var(--chat-mine); color: #fff; border-bottom-right-radius: 4px;
+        }
+        .msg-other {
+            align-self: flex-start; background: var(--chat-other); border: 1px solid var(--border); border-bottom-left-radius: 4px;
+        }
+        .chat-media {
+            max-width: 100%; border-radius: 8px; margin-top: 5px;
+            cursor: pointer; /* 保存可能であることを示唆 */
+        }
+
+        /* ★追加: ショートカットボタン (iPhoneロック画面風) */
+        .shortcut-area {
+            position: fixed; bottom: 30px; right: 20px;
+            display: flex; gap: 15px; z-index: 500;
+        }
+        .shortcut-btn {
+            width: 50px; height: 50px; border-radius: 50%;
+            background: rgba(30, 30, 30, 0.4); /* 暗めの半透明 */
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.15);
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 1.2rem; text-decoration: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+        .shortcut-btn:active { transform: scale(0.9); background: rgba(50, 50, 50, 0.6); }
+
+        /* 設定モーダル */
+        #settings-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6); z-index: 2000; align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background: var(--modal-bg); width: 90%; max-width: 400px; padding: 30px;
+            border-radius: 20px; text-align: center; border: 1px solid var(--border);
+        }
+        .info-row {
+            margin: 15px 0; padding: 15px; background: rgba(0, 0, 0, 0.2); border-radius: 12px;
+        }
+        .info-val { font-size: 1.4rem; font-weight: bold; font-family: monospace; }
+
+        /* モバイル縦向き対応 */
+        @media (max-width: 768px) {
+            #app-screen { flex-direction: column; }
+            .toolbar {
+                width: 100%; height: 70px; flex-direction: row;
+                border-right: none; border-bottom: 1px solid var(--border);
+                padding: 0 15px; justify-content: space-between;
+                overflow-x: visible;
+            }
+            .tool-btn { margin-bottom: 0; margin-right: 15px; width: 42px; height: 42px; }
+            .exit-btn { margin: 0; }
+            .chat-area { width: 100%; height: 40%; border-left: none; border-top: 1px solid var(--border); }
+            .palette-container { position: absolute; bottom: 80px; left: 20px; flex-direction: row; gap: 12px; z-index: 200; }
+            /* スマホの時はショートカットを少し上にずらす（チャットに被らないように） */
+            .shortcut-area { bottom: 80px; right: 20px; flex-direction: column; }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- ログイン -->
+    <div id="login-screen">
+        <div class="login-box">
+            <div class="login-title"><i class="fa-solid fa-door-open"></i> どこでもドア Lite</div>
+            <p style="color:var(--text-main); opacity:0.7; font-size:0.9rem; margin:10px 0 10px;">v4.0</p>
+            <p style="color:var(--text-main); font-size:0.85rem; opacity:0.85; margin-bottom:20px; background:rgba(255,255,255,0.05); padding:8px; border-radius:8px;">
+                ※ルームID、パスワードは<br>数字4桁(例:1234)で構いません
+            </p>
+            <input type="text" id="inp-name" class="login-input" placeholder="名前" maxlength="10">
+            <input type="tel" id="inp-room" class="login-input" placeholder="ルームID (例: 1234)" pattern="[0-9]*">
+            <input type="password" id="inp-pass" class="login-input" placeholder="パスワード (例: 0000)">
+            <button class="login-btn" onclick="handleLogin()">スタート</button>
+        </div>
+        <div class="theme-toggle-login" onclick="toggleTheme()"><i class="fa-solid fa-circle-half-stroke"></i></div>
+    </div>
+
+    <!-- アプリ -->
+    <div id="app-screen">
+        <div class="toolbar">
+            <button class="tool-btn active" id="btn-hand" onclick="setTool('hand')" title="移動"><i class="fa-solid fa-up-down-left-right"></i></button>
+            <button class="tool-btn" id="btn-pen" onclick="setTool('pen')" title="ペン"><i class="fa-solid fa-pen"></i></button>
+
+            <!-- 色パレット -->
+            <div id="color-palette" class="palette-container">
+                <div class="color-dot" style="background:#000000;" onclick="setPenColor('#000000')"></div>
+                <div class="color-dot" style="background:#ffffff;" onclick="setPenColor('#ffffff')"></div>
+                <div class="color-dot" style="background:#ef4444;" onclick="setPenColor('#ef4444')"></div>
+                <div class="color-dot" style="background:#3b82f6;" onclick="setPenColor('#3b82f6')"></div>
+                <div class="color-dot" style="background:#22c55e;" onclick="setPenColor('#22c55e')"></div>
+                <div class="color-dot" style="background:#eab308;" onclick="setPenColor('#eab308')"></div>
+            </div>
+
+            <button class="tool-btn" id="btn-eraser" onclick="setTool('eraser')" title="消しゴム"><i class="fa-solid fa-eraser"></i></button>
+
+            <!-- 消しゴムサイズ選択 -->
+            <div id="eraser-palette" class="palette-container">
+                <div class="size-btn" id="ers-s" onclick="setEraserSize(1)">小</div>
+                <div class="size-btn" id="ers-m" onclick="setEraserSize(1.75)">中</div>
+                <div class="size-btn" id="ers-l" onclick="setEraserSize(2.5)">大</div>
+            </div>
+
+            <button class="tool-btn" id="btn-text" onclick="setTool('text')" title="テキスト"><i class="fa-solid fa-font"></i></button>
+            <button class="tool-btn" onclick="document.getElementById('board-img-upload').click()" title="画像"><i class="fa-regular fa-image"></i></button>
+            <input type="file" id="board-img-upload" hidden accept="image/*" onchange="uploadBoardImage(this)">
+            <button class="tool-btn settings-btn" onclick="openSettings()" title="設定"><i class="fa-solid fa-gear"></i></button>
+            <div style="flex-grow:1; min-width:10px;"></div>
+            <button class="tool-btn exit-btn" onclick="exitRoom()" title="退出"><i class="fa-solid fa-right-from-bracket"></i></button>
+        </div>
+
+        <div class="main-area" id="main-area">
+            <div id="transform-layer">
+                <canvas id="bg-canvas" class="layer-canvas"></canvas>
+                <div id="objects-layer"></div>
+            </div>
+        </div>
+        
+        <!-- ★追加: ショートカットエリア -->
+        <div class="shortcut-area">
+            <a href="https://drive.google.com/drive/home" target="_blank" class="shortcut-btn" title="Google Drive">
+                <i class="fa-brands fa-google-drive"></i>
+            </a>
+            <a href="https://loilonote.app/_/" target="_blank" class="shortcut-btn" title="ロイロノート">
+                <i class="fa-solid fa-pen-to-square"></i>
+            </a>
+        </div>
+
+        <div class="chat-area">
+            <div class="chat-header">
+                <span><i class="fa-regular fa-comments"></i> チャット</span>
+                <span id="conn-count" style="font-size:0.8rem; opacity:0.8; font-weight:normal;">(1人)</span>
+            </div>
+            <div class="chat-messages" id="chat-box"></div>
+            <div class="chat-input-box">
+                <label for="chat-file" style="cursor:pointer; color:var(--accent); font-size:1.4rem; padding:0 5px;"><i class="fa-solid fa-paperclip"></i></label>
+                <!-- ★修正: ファイル選択をリセットして連続送信可能に -->
+                <input type="file" id="chat-file" hidden accept="image/*" onchange="sendChatFile(this)">
+                <input type="text" id="chat-input" class="chat-input" placeholder="メッセージ..." autocomplete="off">
+                <button class="tool-btn" style="width:40px; height:40px; margin:0; background:var(--accent); color:white; border-radius:50%;" onclick="sendChat()"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 設定 -->
+    <div id="settings-modal" onclick="if(event.target===this) closeSettings()">
+        <div class="modal-content">
+            <h3 class="login-title" style="font-size:1.8rem;">設定</h3>
+            <div class="info-row"><span style="color:var(--text-main); opacity:0.7;">ルームID</span><br><span class="info-val" id="set-room-id"></span></div>
+            <div class="info-row"><span style="color:var(--text-main); opacity:0.7;">パスワード</span><br><span class="info-val" id="set-room-pass"></span></div>
+            <div style="margin-top:20px;">
+                <button class="tool-btn" style="background:var(--border); width:auto; padding:0 25px; color:var(--text-main);" onclick="toggleTheme()"><i class="fa-solid fa-circle-half-stroke"></i> テーマ切替</button>
+            </div>
+            <button class="login-btn" style="margin-top:25px; width:auto; padding:12px 40px;" onclick="closeSettings()">閉じる</button>
+        </div>
+    </div>
+
+    <script>
+        const state = {
+            name: '', room: '', pass: '', uid: 'u_' + Date.now().toString(36),
+            tool: 'hand', color: '#000000',
+            eraserScale: 1,
+            scale: 1, panX: 0, panY: 0,
+            lastDraw: null,
+            lastSendTime: 0
+        };
+        const mainArea = document.getElementById('main-area');
+        const tfLayer = document.getElementById('transform-layer');
+        const bgCanvas = document.getElementById('bg-canvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        const objLayer = document.getElementById('objects-layer');
+
+        window.onload = () => {
+            bgCanvas.width = 4000; bgCanvas.height = 4000;
+            bgCtx.translate(2000, 2000);
+            state.panX = window.innerWidth / 2;
+            state.panY = window.innerHeight / 2;
+            updateTransform();
+            document.getElementById('chat-input').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.isComposing) sendChat(); });
+            checkThemeColor();
+            setEraserSize(1);
+        };
+
+        function updateTransform() { tfLayer.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.scale})`; }
+        function toggleTheme() { document.body.classList.toggle('light-mode'); checkThemeColor(); }
+        function checkThemeColor() {
+            if (document.body.classList.contains('light-mode')) { if (state.color === '#ffffff') setPenColor('#000000'); }
+            else { if (state.color === '#000000') setPenColor('#ffffff'); }
+        }
+
+        async function handleLogin() {
+            const name = document.getElementById('inp-name').value.trim();
+            const room = document.getElementById('inp-room').value.trim();
+            const pass = document.getElementById('inp-pass').value.trim();
+            if (!name || !room || !pass) return alert('全ての項目を入力してください');
+            const btn = document.querySelector('.login-btn');
+            btn.disabled = true; btn.textContent = "接続中...";
+
+            try {
+                const roomRef = window.dbRef(window.db, `rooms/${room}`);
+                const snap = await window.dbGet(roomRef);
+                if (snap.exists()) {
+                    const con = await window.dbGet(window.dbChild(roomRef, 'connections'));
+                    if (!con.exists() || con.size === 0) { await window.dbRemove(roomRef); await createRoom(room, pass); enter(name, room, pass); }
+                    else if (snap.val().meta.password === pass) enter(name, room, pass);
+                    else { alert('パスワードが違います'); btn.disabled = false; btn.textContent = "スタート"; }
+                } else { await createRoom(room, pass); enter(name, room, pass); }
+            } catch (e) { console.error(e); alert('接続エラー'); btn.disabled = false; btn.textContent = "スタート"; }
+        }
+        async function createRoom(r, p) { await window.dbSet(window.dbRef(window.db, `rooms/${r}/meta`), { password: p, createdAt: window.serverTimestamp() }); }
+
+        function enter(n, r, p) {
+            state.name = n; state.room = r; state.pass = p;
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app-screen').classList.add('visible');
+            const con = window.dbRef(window.db, `rooms/${r}/connections/${state.uid}`);
+            window.dbSet(con, true); window.dbOnDisconnect(con).remove();
+            state.panX = window.innerWidth / 2; state.panY = window.innerHeight / 2; updateTransform();
+            initListeners();
+        }
+        async function exitRoom() {
+            if (confirm("退出しますか？")) {
+                await window.dbPush(window.dbRef(window.db, `rooms/${state.room}/chat`), { name: "System", text: `${state.name} が退出しました`, type: "sys" });
+                const rRef = window.dbRef(window.db, `rooms/${state.room}`);
+                const snap = await window.dbGet(window.dbChild(rRef, 'connections'));
+                if (snap.size <= 1) await window.dbRemove(rRef); else await window.dbRemove(window.dbRef(window.db, `rooms/${state.room}/connections/${state.uid}`));
+                location.reload();
+            }
+        }
+
+        function initListeners() {
+            const rRef = `rooms/${state.room}`;
+
+            window.dbOnValue(window.dbRef(window.db, rRef + '/connections'), (snap) => {
+                const count = snap.size;
+                document.getElementById('conn-count').textContent = `(${count}人)`;
+            });
+
+            const chatRef = window.dbRef(window.db, rRef + '/chat');
+            const startKey = window.dbPush(chatRef).key;
+            window.dbSet(window.dbRef(window.db, rRef + '/chat/' + startKey), { name: "System", text: `${state.name} が入室しました`, type: "sys" });
+            window.dbOnDisconnect(window.dbPush(chatRef)).set({ name: "System", text: `${state.name} (切断)`, type: "sys" });
+
+            const q = window.dbQuery(chatRef, window.dbOrderByKey(), window.dbStartAt(startKey));
+            window.dbOnChildAdded(q, s => renderChat(s.val()));
+            window.dbOnChildAdded(window.dbRef(window.db, rRef + '/draw'), s => drawLocal(s.val()));
+            window.dbOnChildAdded(window.dbRef(window.db, rRef + '/texts'), s => renderText(s.key, s.val()));
+            window.dbOnChildChanged(window.dbRef(window.db, rRef + '/texts'), s => renderText(s.key, s.val()));
+            window.dbOnChildRemoved(window.dbRef(window.db, rRef + '/texts'), s => { const el = document.getElementById('text-' + s.key); if (el) el.remove(); });
+            window.dbOnChildAdded(window.dbRef(window.db, rRef + '/images'), s => renderImage(s.key, s.val()));
+            window.dbOnChildChanged(window.dbRef(window.db, rRef + '/images'), s => renderImage(s.key, s.val()));
+            window.dbOnChildRemoved(window.dbRef(window.db, rRef + '/images'), s => { const el = document.getElementById('img-wrap-' + s.key); if (el) el.remove(); });
+        }
+
+        /* 描画・操作 */
+        let isDrag = false;
+        mainArea.addEventListener('pointerdown', e => {
+            if (e.target.closest('.text-window') || e.target.closest('.image-wrapper')) return;
+            if (state.tool === 'text') { const w = getPos(e.clientX, e.clientY); createText(w.x, w.y); setTool('hand'); return; }
+            isDrag = true; mainArea.setPointerCapture(e.pointerId);
+            if (state.tool === 'pen' || state.tool === 'eraser') {
+                state.lastDraw = getPos(e.clientX, e.clientY);
+                state.lastSendTime = Date.now();
+            }
+        });
+
+        mainArea.addEventListener('pointermove', e => {
+            if (!isDrag) return; e.preventDefault();
+            if (state.tool === 'hand') { state.panX += e.movementX; state.panY += e.movementY; updateTransform(); }
+            else {
+                const w = getPos(e.clientX, e.clientY);
+                const dist = Math.abs(w.x - state.lastDraw.x) + Math.abs(w.y - state.lastDraw.y);
+                const now = Date.now();
+                if (dist < 4 || (now - state.lastSendTime < 30)) return;
+
+                const mode = state.tool === 'eraser' ? 'erase' : 'draw';
+                const width = state.tool === 'eraser' ? (30 * state.eraserScale) : 3;
+
+                const d = { x0: state.lastDraw.x, y0: state.lastDraw.y, x1: w.x, y1: w.y, color: state.color, width: width, mode: mode };
+                drawLocal(d);
+                window.dbPush(window.dbRef(window.db, `rooms/${state.room}/draw`), d);
+                state.lastDraw = w;
+                state.lastSendTime = now;
+            }
+        });
+        mainArea.addEventListener('pointerup', () => isDrag = false);
+        mainArea.addEventListener('wheel', e => { e.preventDefault(); zoom(Math.exp(-e.deltaY * 0.001), e.clientX, e.clientY); }, { passive: false });
+        let lastDist = 0;
+        mainArea.addEventListener('touchstart', e => { if (e.touches.length === 2) { isDrag = false; lastDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); } }, { passive: false });
+        mainArea.addEventListener('touchmove', e => { if (e.touches.length === 2) { e.preventDefault(); const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); if (lastDist > 0) zoom(d / lastDist, (e.touches[0].clientX + e.touches[1].clientX) / 2, (e.touches[0].clientY + e.touches[1].clientY) / 2); lastDist = d; } }, { passive: false });
+
+        function getPos(cx, cy) { const r = mainArea.getBoundingClientRect(); return { x: (cx - r.left - state.panX) / state.scale, y: (cy - r.top - state.panY) / state.scale }; }
+        function zoom(f, cx, cy) { const s = Math.max(0.1, Math.min(5, state.scale * f)); const r = mainArea.getBoundingClientRect(); state.panX = (cx - r.left) - (cx - r.left - state.panX) * (s / state.scale); state.panY = (cy - r.top) - (cy - r.top - state.panY) * (s / state.scale); state.scale = s; updateTransform(); }
+
+        function drawLocal(d) {
+            bgCtx.save(); bgCtx.beginPath(); bgCtx.moveTo(d.x0, d.y0); bgCtx.lineTo(d.x1, d.y1);
+            if (d.mode === 'erase') { bgCtx.globalCompositeOperation = 'destination-out'; bgCtx.strokeStyle = 'rgba(0,0,0,1)'; }
+            else { bgCtx.globalCompositeOperation = 'source-over'; bgCtx.strokeStyle = d.color; }
+            bgCtx.lineWidth = d.width; bgCtx.lineCap = 'round'; bgCtx.lineJoin = 'round'; bgCtx.stroke(); bgCtx.restore();
+        }
+
+        window.setTool = (t) => {
+            state.tool = t;
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-' + t).classList.add('active');
+            document.getElementById('color-palette').style.display = (t === 'pen') ? 'flex' : 'none';
+            document.getElementById('eraser-palette').style.display = (t === 'eraser') ? 'flex' : 'none';
+            mainArea.style.cursor = (t === 'hand') ? 'grab' : (t === 'text' ? 'text' : 'crosshair');
+        };
+
+        window.setPenColor = (c) => {
+            state.color = c;
+            document.querySelectorAll('.color-dot').forEach(d => d.classList.toggle('selected', d.style.backgroundColor === c || (c === '#ffffff' && d.style.backgroundColor === 'rgb(255, 255, 255)') || (c === '#000000' && d.style.backgroundColor === 'rgb(0, 0, 0)')));
+            if (state.tool !== 'pen') setTool('pen');
+        };
+
+        window.setEraserSize = (s) => {
+            state.eraserScale = s;
+            document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
+            if (s === 1) document.getElementById('ers-s').classList.add('selected');
+            if (s === 1.75) document.getElementById('ers-m').classList.add('selected');
+            if (s === 2.5) document.getElementById('ers-l').classList.add('selected');
+            if (state.tool !== 'eraser') setTool('eraser');
+        };
+
+        /* テキスト */
+        function createText(x, y) { window.dbPush(window.dbRef(window.db, `rooms/${state.room}/texts`), { x, y, text: '', w: 220, h: 120 }); }
+        function renderText(key, d) {
+            let el = document.getElementById('text-' + key);
+            if (!el) {
+                el = document.createElement('div'); el.id = 'text-' + key; el.className = 'text-window';
+                el.innerHTML = `<div class="text-header"></div><div class="close-btn-common">×</div><textarea class="text-content"></textarea><div class="resize-handle">⤡</div>`;
+                objLayer.appendChild(el);
+                const head = el.querySelector('.text-header');
+                const close = el.querySelector('.close-btn-common');
+                const ta = el.querySelector('textarea');
+                const res = el.querySelector('.resize-handle');
+                close.onclick = e => { e.stopPropagation(); if (confirm('削除？')) window.dbRemove(window.dbRef(window.db, `rooms/${state.room}/texts/${key}`)); };
+                ta.oninput = () => window.dbUpdate(window.dbRef(window.db, `rooms/${state.room}/texts/${key}`), { text: ta.value });
+                el.onmousedown = () => el.style.zIndex = 100;
+                setupDrag(head, el, (nx, ny) => window.dbUpdate(window.dbRef(window.db, `rooms/${state.room}/texts/${key}`), { x: nx, y: ny }));
+                setupResize(res, el, (nw, nh) => window.dbUpdate(window.dbRef(window.db, `rooms/${state.room}/texts/${key}`), { w: nw, h: nh }));
+            }
+            el.style.left = d.x + 'px'; el.style.top = d.y + 'px'; el.style.width = (d.w || 220) + 'px'; el.style.height = (d.h || 120) + 'px';
+            const ta = el.querySelector('textarea'); if (document.activeElement !== ta) ta.value = d.text || '';
+        }
+
+        /* 画像 */
+        window.uploadBoardImage = (input) => {
+            if (input.files[0]) {
+                if (input.files[0].size > 3 * 1024 * 1024) return alert('3MB以下にしてください');
+                const r = new FileReader(); r.onload = e => { const w = getPos(window.innerWidth / 2, window.innerHeight / 2); window.dbPush(window.dbRef(window.db, `rooms/${state.room}/images`), { x: w.x, y: w.y, width: 250, height: 250, src: e.target.result }); }; r.readAsDataURL(input.files[0]); input.value = '';
+            }
+        };
+        function renderImage(key, d) {
+            let el = document.getElementById('img-wrap-' + key);
+            if (!el) {
+                el = document.createElement('div'); el.id = 'img-wrap-' + key; el.className = 'image-wrapper';
+                el.innerHTML = `<img src="${d.src}"><div class="close-btn-common">×</div><div class="resize-handle">⤡</div>`;
+                objLayer.appendChild(el);
+                const close = el.querySelector('.close-btn-common');
+                close.onclick = e => { e.stopPropagation(); if (confirm('削除？')) window.dbRemove(window.dbRef(window.db, `rooms/${state.room}/images/${key}`)); };
+                el.ondblclick = e => { e.stopPropagation(); if (confirm('削除？')) window.dbRemove(window.dbRef(window.db, `rooms/${state.room}/images/${key}`)); };
+                setupDrag(el, el, (nx, ny) => window.dbUpdate(window.dbRef(window.db, `rooms/${state.room}/images/${key}`), { x: nx, y: ny }));
+                setupResize(el.querySelector('.resize-handle'), el, (nw, nh) => window.dbUpdate(window.dbRef(window.db, `rooms/${state.room}/images/${key}`), { width: nw, height: nh }));
+            }
+            el.style.left = d.x + 'px'; el.style.top = d.y + 'px'; el.style.width = (d.width || 250) + 'px'; el.style.height = (d.height || 250) + 'px';
+        }
+
+        function setupDrag(handle, target, onEnd) {
+            let isD = false, sx, sy;
+            handle.onpointerdown = e => {
+                if (e.target.closest('.close-btn-common') || e.target.closest('.resize-handle')) return;
+                e.preventDefault(); isD = true; handle.setPointerCapture(e.pointerId);
+                const r = target.getBoundingClientRect(); sx = e.clientX - r.left; sy = e.clientY - r.top; e.stopPropagation();
+            };
+            handle.onpointermove = e => {
+                if (!isD) return; const r = mainArea.getBoundingClientRect();
+                target.style.left = ((e.clientX - r.left - state.panX) / state.scale - sx / state.scale) + 'px';
+                target.style.top = ((e.clientY - r.top - state.panY) / state.scale - sy / state.scale) + 'px';
+            };
+            handle.onpointerup = () => { if (isD) { isD = false; onEnd(parseFloat(target.style.left), parseFloat(target.style.top)); } };
+        }
+        function setupResize(handle, target, onEnd) {
+            let isR = false, lr = { x: 0, y: 0 };
+            handle.onpointerdown = e => { e.stopPropagation(); e.preventDefault(); isR = true; lr = { x: e.clientX, y: e.clientY }; handle.setPointerCapture(e.pointerId); };
+            handle.onpointermove = e => { if (!isR) return; const dx = (e.clientX - lr.x) / state.scale, dy = (e.clientY - lr.y) / state.scale; target.style.width = Math.max(50, parseFloat(target.style.width) + dx) + 'px'; target.style.height = Math.max(50, parseFloat(target.style.height) + dy) + 'px'; lr = { x: e.clientX, y: e.clientY }; };
+            handle.onpointerup = () => { if (isR) { isR = false; onEnd(parseFloat(target.style.width), parseFloat(target.style.height)); } };
+        }
+
+        /* チャット */
+        window.sendChat = () => { const i = document.getElementById('chat-input'); if (i.value.trim()) window.dbPush(window.dbRef(window.db, `rooms/${state.room}/chat`), { name: state.name, text: i.value.trim(), type: 'user', timestamp: window.serverTimestamp() }); i.value = ''; };
+        window.sendChatFile = i => {
+            if (i.files[0]) {
+                if (i.files[0].size > 3 * 1024 * 1024) return alert('3MB以下にしてください');
+                const r = new FileReader(); r.onload = e => {
+                    let type = 'image'; if (i.files[0].type.startsWith('video')) type = 'video'; else if (i.files[0].type.startsWith('audio')) type = 'audio';
+                    window.dbPush(window.dbRef(window.db, `rooms/${state.room}/chat`), { name: state.name, media: e.target.result, mediaType: type, type: 'user', timestamp: window.serverTimestamp() });
+                }; r.readAsDataURL(i.files[0]); i.value = ''; // Reset input to allow sending same file again
+            }
+        };
+        function renderChat(v) {
+            const b = document.getElementById('chat-box'), d = document.createElement('div');
+            if (v.type === 'sys') { d.className = 'msg msg-sys'; d.textContent = v.text; }
+            else {
+                d.className = `msg ${v.name === state.name ? 'msg-self' : 'msg-other'}`;
+                let c = `<div style="font-size:0.75rem;opacity:0.8;margin-bottom:2px;">${escapeHtml(v.name)}</div>`;
+                if (v.text) c += escapeHtml(v.text);
+                if (v.media) {
+                    if (v.mediaType === 'image') c += `<img src="${v.media}" class="chat-media">`;
+                    else if (v.mediaType === 'video') c += `<video src="${v.media}" controls class="chat-media"></video>`;
+                    else if (v.mediaType === 'audio') c += `<audio src="${v.media}" controls style="max-width:100%; margin-top:5px;"></audio>`;
+                }
+                d.innerHTML = c;
+            }
+            b.appendChild(d); b.scrollTop = b.scrollHeight;
+        }
+
+        window.openSettings = () => { document.getElementById('set-room-id').textContent = state.room; document.getElementById('set-room-pass').textContent = state.pass; document.getElementById('settings-modal').style.display = 'flex'; };
+        window.closeSettings = () => { document.getElementById('settings-modal').style.display = 'none'; };
+        function escapeHtml(s) { return s ? s.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m])) : ''; }
+    </script>
+</body>
+
+</html>
